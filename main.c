@@ -1,77 +1,64 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>  //Header file for sleep(). man 3 sleep for details.
-#include <pthread.h>
 #include <string.h>
 #include <locale.h>
 #include <wchar.h>
-#include <iconv.h>
 #include <unistd.h>
 
-void debug_string(char *str) {
-  printf("\n%d[%c]",str[0], str[0]);
-  for (int i = 1; i < strlen(str); i++)
-  {
-    printf(" - %d[%c]",str[i], str[i]);
-  }
-  printf("\n");
-  return;
+void debug_string(char * str) {
+    printf("\n%d[%c]", str[0], str[0]);
+    for (int i = 1; i < strlen(str); i++) {
+        printf(" - %d[%c]", str[i], str[i]);
+    }
+    printf("\n");
+    return;
 }
 
 //https://codereview.stackexchange.com/a/40792
-size_t iso8859_1_to_utf8(char *content, size_t max_size)
-{
-    char *src, *dst;
+size_t iso8859_1_to_utf8(char * content, size_t max_size) {
+    char * src, * dst;
 
     //first run to see if there's enough space for the new bytes
-    for (src = dst = content; *src; src++, dst++)
-    {
-        if (*src & 0x80)
-        {
+    for (src = dst = content;* src; src++, dst++) {
+        if ( * src & 0x80) {
             // If the high bit is set in the ISO-8859-1 representation, then
             // the UTF-8 representation requires two bytes (one more than usual).
             ++dst;
         }
     }
 
-    if (dst - content + 1 > max_size)
-    {
+    if (dst - content + 1 > max_size) {
         // Inform caller of the space required
         return dst - content + 1;
     }
 
     *(dst + 1) = '\0';
-    while (dst > src)
-    {
-        if (*src & 0x80)
-        {
-            *dst-- = 0x80 | (*src & 0x3f);                     // trailing byte
-            *dst-- = 0xc0 | (*((unsigned char *)src--) >> 6);  // leading byte
-        }
-        else
-        {
-            *dst-- = *src--;
+    while (dst > src) {
+        if ( * src & 0x80) {
+            * dst-- = 0x80 | ( * src & 0x3f); // trailing byte
+            * dst-- = 0xc0 | ( * ((unsigned char * ) src--) >> 6); // leading byte
+        } else {
+            * dst-- = * src--;
         }
     }
-    return 0;  // SUCCESS
+    return 0; // SUCCESS
 }
 
 //https://codereview.stackexchange.com/a/40857
-char* iso88959_to_utf8(const char *str)
-{
-    char *utf8 = malloc(1 + (2 * strlen(str)));
+char * iso88959_to_utf8(const char * str) {
+    char * utf8 = malloc(1 + (2 * strlen(str)));
 
     if (utf8) {
-        char *c = utf8;
-        for (; *str; ++str) {
-            if (*str & 0x80) {
-                *c++ = *str;
+        char * c = utf8;
+        for (;* str; ++str) {
+            if ( * str & 0x80) {
+                * c++ = * str;
             } else {
-                *c++ = (char) (0xc0 | (unsigned) *str >> 6);
-                *c++ = (char) (0x80 | (*str & 0x3f));
+                * c++ = (char)(0xc0 | (unsigned) * str >> 6);
+                * c++ = (char)(0x80 | ( * str & 0x3f));
             }
         }
-        *c++ = '\0';
+        * c++ = '\0';
     }
     return utf8;
 }
@@ -207,157 +194,96 @@ size_t utf8_to_latin9(char *const output, const char *const input, const size_t 
     return (size_t)(out - (unsigned char *)output);
 }
 
-int cmp (const void *a, const void *b) {
-   return *(char*)a - *(char*)b;
+int cmp(const void * a,
+    const void * b) {
+    return *(char * ) a - * (char * ) b;
 }
 
-// A normal C function that is executed as a thread
-// when its name is specified in pthread_create()
-void *myThreadFun(void *vargp)
-{
-    //sleep(1);
-    //printf("Printing GeeksQuiz from Thread \n");
-    return NULL;
+long getMicrotime() {
+    struct timeval currentTime;
+    gettimeofday( & currentTime, NULL);
+    return currentTime.tv_sec * (int) 1e6 + currentTime.tv_usec;
 }
 
-long getMicrotime(){
-	struct timeval currentTime;
-	gettimeofday(&currentTime, NULL);
-	return currentTime.tv_sec * (int)1e6 + currentTime.tv_usec;
-}
+int main(int argc, char ** argv) {
+    //printf("Dictionary: %s\nWord to anagram: %s\n", argv[1], argv[2]);
+    long start = getMicrotime();
+    nice(-20);
+    char in[30];
+    strcpy(in , argv[2]); //{-11,114,110,118,97,108,103,101}; //õrnvalge
 
-int main(int argc, char** argv) {
-  //printf("Dictionary: %s\nWord to anagram: %s\n", argv[1], argv[2]);
-  long start = getMicrotime();
-  nice(-20);
-  char in[30];
-  strcpy(in,argv[2]);//{-11,114,110,118,97,108,103,101}; //õrnvalge
+    utf8_to_latin9(in, in, strlen(in)); //linux terminal arguments come in at utf-8, we work in latin9 encoding
 
-  utf8_to_latin9(in, in, strlen(in));
+    char in_ord[30] = "";
+    strcpy(in_ord, in );
+    qsort(in_ord, strlen(in_ord), sizeof(char), cmp);
 
+    char possible[106000][30]; //array for all correct anagrams
 
-  char in_ord[30] = "";
-  strcpy(in_ord, in);
-  qsort(in_ord, strlen(in_ord), sizeof(char), cmp);
+    //Get length of input word
+    int in_len = strlen(in);
+    int in_sum = 0;
+    for (int i = 0; i < in_len; i++) {
+        in_sum += (int) in [i];
+    }
 
-  char possible[106000][30];
+    FILE * f;
+    char s[30];
+    char s_ord[30];
+    char s2[30];
 
-  //Get length of input word
-  int in_len = strlen(in); //when line read from file it will be 1 longer, also NB because of unicode this is not real number of charachters in file
+    f = fopen(argv[1], "r");
+    if (!f)
+        return 1;
+    int possible_len = 0;
+    int s_len = 0;
 
-  int in_sum = 0;
-  for (int i = 0; i < in_len; i++)
-  {
-    in_sum+=(int)in[i];
-    //printf("%d[%c] - ",in[i], in[i]);
-  }
-  //printf("NOTHING \n");
+    while (fgets(s2, 20, f) != NULL) {
+        strcpy(s, s2);
+        s_len = strlen(s);
+        if (s[s_len - 1] == 10) {s[s_len - 1] = 0;}
+        if (s[s_len - 2] == 13) {s[s_len - 2] = 0;}
 
-  //printf("String %s (ordered as %s) is %d long and has naive sum of %d\n",in, in_ord, in_len, in_sum);
-
-    pthread_t thread_id;
-
-        FILE *f;
-        char s[30];
-        char s_ord[30];
-        char s2[30];
-
-        f=fopen(argv[1],"r");
-        if (!f)
-            return 1;
-        int possible_len = 0;
-        int s_len = 0;
-        while (fgets(s2,30,f)!=NULL) {
-          strcpy(s, s2);
-          s_len = strlen(s);
-          s[s_len-1] = 0;
-          if (s[s_len-2] == 13) {s[s_len-2] = 0;}
-
-          s_len = strlen(s);
-//          printf("Atleast it got read... %s\n",s);
-//          printf("%d != %d\n", s_len, in_len);
-          if (s_len == in_len) {
-//            printf("lens were same\n");
+        s_len = strlen(s);
+        if (s_len == in_len) {
             int s_sum = 0;
-            for (int i = 0; i < s_len; i++)  {
-//              printf("%d[%c] - ", s[i], s[i]);
-              s_sum+=(int)s[i];
+            for (int i = 0; i < s_len; i++) {
+                s_sum += (int) s[i];
             }
-//            printf("NOTHING \n");
+            if (s_sum == in_sum) {
+                size_t numbers_len = strlen(s);
+                strcpy(s_ord, s);
+                qsort(s_ord, strlen(s_ord), sizeof(char), cmp);
 
-//            printf("%s, %d, %s, %d", in, in_sum, s, s_sum);
-            if (s_sum == in_sum) { //-10 to remove \n charachter
-//              printf("sums were same\n");
-              size_t numbers_len = strlen(s);
-
-              strcpy(s_ord, s);
-              //printf("BEFORE: %s\n", s);
-              qsort(s_ord, strlen(s_ord), sizeof(char), cmp);
-              //printf("AFTER: %s\n", s_ord);
-
-              if (strcmp(s_ord,in_ord) == 0) {
-                strcpy(possible[possible_len], s);
-                possible_len++;
-                //printf("%d - %d - %s\n",strlen(s), s_sum, s);
-              }
+                if (strcmp(s_ord, in_ord) == 0) {
+                    strcpy(possible[possible_len], s);
+                    possible_len++;
+                    printf(s);
+                }
 
             }
-          }
-          //printf("%d - %s",strlen(s), s);
-
         }
-        fclose(f);
-
-/*
-FILE *f = fopen("lemmad.txt", "rb");
-fseek(f, 0, SEEK_END);
-long fsize = ftell(f);
-fseek(f, 0, SEEK_SET);  // same as rewind(f);
-
-char *string = malloc(fsize + 1);
-fread(string, fsize, 1, f);
-fclose(f);
-char *p, *temp;
-  p = strtok_r(string, "\n", &temp);
-  do {
-      //printf("current line = %s", p);
-  } while ((p = strtok_r(NULL, "\n", &temp)) != NULL);
-
-string[fsize] = 0;
-*/
-
-    //printf("Before Thread\n");
-    pthread_create(&thread_id, NULL, myThreadFun, NULL);
-    pthread_join(thread_id, NULL);
-    //printf("After Thread\n");
-    //printf("There were %d matches\n", possible_len);
-    //printf("%d\n", strlen("\n"));
-
-    //OUTPUT
-    long end = getMicrotime();
-    printf("%d", (end-start));
-    setlocale(LC_ALL, "");
-    for (int i = 0; i < possible_len; i++) {
-      char a[30];
-      strcpy(a, possible[i]);
-      iso8859_1_to_utf8(a, 100);
-      printf(",%s", a);
-
-/*    char *a = "õnn";
-      char b[10];
-      char c[10];
-
-      strcpy(c, b);
-      debug_string(a);
-      debug_string(b);
-      debug_string(iso88959_to_utf8(b));
-
-      debug_string(c);*/
 
     }
 
 
 
-    printf("\n");
+    fclose(f);
+
+
+    //OUTPUT
+    setlocale(LC_ALL, "");
+    char results[128];   // Use an array which is large enough
+    printf("matches %d \n", possible_len);
+    for (int i = 0; i < possible_len; i++) {
+        char a[30];
+        strcpy(a, possible[i]);
+        iso8859_1_to_utf8(a, 100);
+        strcat(results, ",");
+        strcat(results, a);
+    }
+
+    long end = getMicrotime();
+    printf("%d%s\n", (end - start), results);
     exit(0);
 }
