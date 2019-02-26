@@ -81,7 +81,7 @@ int main(int argc, char ** argv) {
     char *in;
     in = malloc(in_len);
     memcpy(in, argv[2], in_len);
-    lowerIfHigher(in[0]);
+/*    lowerIfHigher(in[0]);*/
     char in_ord[30];
     strcpy(in_ord, in );
     qsort(in_ord, strlen(in_ord), sizeof(char), cmp);
