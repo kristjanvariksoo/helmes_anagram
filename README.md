@@ -3,9 +3,9 @@
 
 do the things using:
 
-gcc main.c -o bin/main && chmod +x bin/main && bin/main lemmad.txt luuk
+gcc -O2 -o main main.c -pthread && chmod +x main && ./main lemmad.txt kuul
 
 #TO-DO
 
-lowercase some stuff at beginning of lemmed
+lowercase some stuff at beginning of lemmed  
 deal with input having space
