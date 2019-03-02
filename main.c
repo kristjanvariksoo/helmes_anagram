@@ -70,7 +70,7 @@ void mysweetstrcpy(char *dest, char *src, unsigned int *len) {
 }
 */
 int main(int argc, char ** argv) {
-    //printf("Dictionary: %s\nWord to anagram: %s\n", argv[1], argv[2]);
+    // fix Zurnaal and Sokolaad
     long start = getMicrotime();
     setlocale(LC_ALL, "");
 
