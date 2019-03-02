@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 char *strlwr(char *str)
 {
@@ -48,6 +49,34 @@ char lowerIfHigher(unsigned char in) {
   return out;
 }
 
+bool isAnagram(int * empty_hist, int * in_hist, unsigned char * line, int line_len, int in_len) {
+  int line_hist[256];
+
+  if (in_len == line_len){
+    memcpy(line_hist, in_hist, sizeof(int)*256);
+
+    for (int i = 0; i < line_len; i++) {
+      line[i] = tolower(line[i]);
+      if (line_hist[line[i]] < 1) {
+        return false;
+      } else {
+        line_hist[line[i]] -= 1;
+      }
+    }
+
+    if (memcmp(line_hist, empty_hist, sizeof (int) * 256) == 0) {
+      printf("SUKSIS!\n");
+      return true;
+    } else {
+      printf("FAIL???");
+      return false;
+    }
+  } else {
+    return false; //line len not same
+  }
+  printf("WE WERENT SUPPOSED TO GET HERE!");
+  return false;
+}
 
 int cmp(const void * a,
     const void * b) {
@@ -70,7 +99,6 @@ void mysweetstrcpy(char *dest, char *src, unsigned int *len) {
 }
 */
 int main(int argc, char ** argv) {
-    // fix Zurnaal and Sokolaad
     long start = getMicrotime();
     setlocale(LC_ALL, "");
 
@@ -101,11 +129,12 @@ int main(int argc, char ** argv) {
 
     in = strlwr(in);
 
-/*    lowerIfHigher(in[0]);*/
-    unsigned char in_ord[50];
-    strcpy(in_ord, in );
-    qsort(in_ord, strlen(in_ord), sizeof(char), cmp);
+    int in_hist[256] = {0};
+    int empty_hist[256] = {0};
 
+    for (int i = 0; i < in_len; i++) {
+      in_hist[in[i]] += 1;
+    }
 
     unsigned char possible[106000][50]; //array for all correct anagrams
 
@@ -113,12 +142,8 @@ int main(int argc, char ** argv) {
     for (int i = 0; i < in_len; i++) {
       in[i] = tolower(in[i]);
       in_sum += (int) in [i];
-    //  printf ("%d - %c\n", in[i], in[i]);
     }
 
-    //printf("|%s| - |%s| - %d\n", in, in_ord, in_sum);
-
-    unsigned char s_ord[50];
     int possible_len = 0;
 
     unsigned char *buffer;
@@ -138,39 +163,18 @@ int main(int argc, char ** argv) {
 
     unsigned char *line;
     unsigned char *next_line = strtok(text, "\r\n");
+    int line_hist[256];
     while (next_line != NULL) {
       int line_len = 0;
       line = next_line;
       next_line = strtok(NULL, "\r\n");
-
       //check if length is same
       line_len = next_line - line - 2;
-
-      //printf("%s - %d - %d\n", line, line_len, in_len);
-      if (line_len == in_len) {
-        //if sum is same
-        //printf("SAME: %s - %d - %d\n", line, line_len, in_len);
-        line[0] = lowerIfHigher(line[0]);
-        int s_sum = 0;
-        for (int i = 0; i < line_len; i++) {
-          line[i] = tolower(line[i]);
-          s_sum += (int) line[i];
-          //printf ("%d - %c\n", line[i], line[i]);
-        }
-        //printf("%s - %d - %d\n", line, s_sum, in_sum);
-        if (s_sum == in_sum) {
-          //printf("%s - %d - %d\n", line, s_sum, in_sum);
-          //if sorted are identical
-          //strcpy(s_ord, line);
-
-          memcpy(s_ord, line, line_len + 1); //Not sure why but the +1 was needed, otherwise garbage was at end.
-          qsort(s_ord, line_len, sizeof(char), cmp);
-
-          if (strcmp(s_ord, in_ord) == 0) {
-              strcpy(possible[possible_len], line);
-              possible_len++;
-          }
-        }
+      if (isAnagram(empty_hist, in_hist, line, line_len, in_len)) {
+        strcpy(possible[possible_len], line);
+        possible_len++;
+      } else {
+        //printf("NOT AN ANAGRAM");
       }
     }
 
