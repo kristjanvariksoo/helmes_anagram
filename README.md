@@ -1,11 +1,5 @@
 # helmes_anagram
 
+Supports spaces. Input dictionary and commandline input shouble be ISO 8859-13.
 
-do the things using:
-
-gcc -O2 -o main main.c -pthread && chmod +x main && ./main lemmad.txt kuul
-
-#TO-DO
-
-lowercase some stuff at beginning of lemmed  
-deal with input having space
+gcc main.c -Ofast -o bin/main
